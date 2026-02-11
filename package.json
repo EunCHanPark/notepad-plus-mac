@@ -1,6 +1,6 @@
 {
   "name": "notepad-plus-mac",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Notepad++ 스타일의 macOS 텍스트 에디터",
   "author": "channy",
   "license": "MIT",
@@ -63,9 +63,7 @@
       "src/**/*",
       "assets/**/*"
     ],
-    "asarUnpack": [
-      "node_modules/ace-builds/**"
-    ],
+    "asarUnpack": [],
     "directories": {
       "output": "dist"
     }

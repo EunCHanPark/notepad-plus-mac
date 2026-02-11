@@ -185,6 +185,7 @@ html, body {
   flex: 1;
   height: 100%;
   min-width: 0;
+  position: relative;
 }
 
 /* Markdown 미리보기 패널 */

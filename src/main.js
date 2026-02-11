@@ -41,6 +41,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      sandbox: false,
     },
     show: false,
   });
@@ -238,7 +239,7 @@ function showAbout() {
     type: 'info',
     title: 'Notepad+ Mac 정보',
     message: 'Notepad+ Mac',
-    detail: 'Version 1.0.4\n\nNotepad++ 스타일의 macOS 텍스트 에디터\nAce Editor 기반\n\nInspired by Notepad++ by Don Ho',
+    detail: 'Version 1.0.5\n\nNotepad++ 스타일의 macOS 텍스트 에디터\nAce Editor 기반\n\nInspired by Notepad++ by Don Ho',
     buttons: ['확인']
   });
 }

@@ -1,21 +1,23 @@
+// 에러 표시 (디버그용)
+window.onerror = function(msg, url, line, col, error) {
+  const el = document.getElementById('editor-container');
+  if (el) {
+    el.style.cssText = 'padding:20px;color:#ff4444;white-space:pre-wrap;font-family:monospace;font-size:13px;overflow:auto;';
+    el.textContent = `Error: ${msg}\nFile: ${url}\nLine: ${line}:${col}\n\n${error ? error.stack : ''}`;
+  }
+};
+
 const { ipcRenderer } = require('electron');
 const path = require('path');
-const { marked } = require('marked');
 
+// marked는 index.html에서 <script> 태그로 로드됨 (UMD)
 marked.setOptions({ breaks: true, gfm: true });
 
-// Ace Editor 로드
-let acePath = path.join(__dirname, '..', 'node_modules', 'ace-builds', 'src-min-noconflict');
-if (acePath.includes('app.asar')) {
-  acePath = acePath.replace('app.asar', 'app.asar.unpacked');
-}
-
-// Ace 설정
-const ace = require(path.join(acePath, 'ace'));
-ace.config.set('basePath', acePath);
-ace.config.set('modePath', acePath);
-ace.config.set('themePath', acePath);
-ace.config.set('workerPath', acePath);
+// Ace Editor는 index.html에서 <script> 태그로 로드됨
+// basePath 설정 (동적 mode/theme 로딩을 위해)
+ace.config.set('basePath', '../node_modules/ace-builds/src-min-noconflict');
+ace.config.set('modePath', '../node_modules/ace-builds/src-min-noconflict');
+ace.config.set('themePath', '../node_modules/ace-builds/src-min-noconflict');
 
 // 전역 상태
 let editor = null;
@@ -85,6 +87,7 @@ function initEditor() {
   editor = ace.edit('editor-container');
   editor.setTheme('ace/theme/' + currentTheme);
   editor.setFontSize(currentFontSize);
+  editor.session.setUseWorker(false);
   editor.setOptions({
     enableBasicAutocompletion: true,
     enableSnippets: false,
@@ -161,6 +164,7 @@ function switchToTab(tabId) {
 
   editor.setValue(tab.content, -1);
   editor.session.setMode('ace/mode/' + tab.mode);
+  editor.session.setUseWorker(false);
   editor.moveCursorToPosition(tab.cursorPos);
   editor.session.setScrollTop(tab.scrollTop);
   editor.focus();
@@ -232,6 +236,7 @@ async function saveTabAs(tab) {
     tab.mode = newMode;
     if (tab.id === activeTabId && editor) {
       editor.session.setMode('ace/mode/' + newMode);
+      editor.session.setUseWorker(false);
     }
   }
   await saveTab(tab);
@@ -250,8 +255,8 @@ function renderTabs() {
     tabEl.dataset.tabId = tab.id;
     tabEl.innerHTML = `
       <span class="tab-title" title="${tab.filePath || tab.fileName}">${tab.fileName}</span>
-      <span class="tab-modified">●</span>
-      <span class="tab-close" title="닫기">×</span>
+      <span class="tab-modified">&bull;</span>
+      <span class="tab-close" title="닫기">&times;</span>
     `;
     tabEl.addEventListener('click', (e) => {
       if (!e.target.classList.contains('tab-close')) switchToTab(tab.id);
@@ -342,6 +347,7 @@ ipcRenderer.on('file-opened', (event, { filePath, content }) => {
     if (editor) {
       editor.setValue(content, -1);
       editor.session.setMode('ace/mode/' + currentTab.mode);
+      editor.session.setUseWorker(false);
     }
     renderTabs();
     updateStatusBar();
@@ -408,7 +414,10 @@ ipcRenderer.on('set-language', (e, langId) => {
   const tab = tabs.find(t => t.id === activeTabId);
   if (tab) {
     tab.mode = langId;
-    if (editor) editor.session.setMode('ace/mode/' + langId);
+    if (editor) {
+      editor.session.setMode('ace/mode/' + langId);
+      editor.session.setUseWorker(false);
+    }
     updateStatusBar();
   }
 });
