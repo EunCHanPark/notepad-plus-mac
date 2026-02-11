@@ -28,6 +28,7 @@ let currentTheme = 'monokai';
 let currentFontSize = 14;
 let markdownPreviewVisible = false;
 let markdownUpdateTimer = null;
+let lastRenderedMarkdown = null;
 
 // 확장자 → Ace 모드 매핑
 const EXT_MODE_MAP = {
@@ -321,13 +322,18 @@ function updateMarkdownPreview() {
   const tab = tabs.find(t => t.id === activeTabId);
   if (!tab) return;
   const content = (tab.id === activeTabId && editor) ? editor.getValue() : tab.content;
-  document.getElementById('markdown-preview-content').innerHTML = marked.parse(content);
+  if (content === lastRenderedMarkdown) return;
+  lastRenderedMarkdown = content;
+  const previewEl = document.getElementById('markdown-preview-content');
+  const scrollTop = previewEl.scrollTop;
+  previewEl.innerHTML = marked.parse(content);
+  previewEl.scrollTop = scrollTop;
 }
 
 function scheduleMarkdownUpdate() {
   if (!markdownPreviewVisible) return;
   if (markdownUpdateTimer) clearTimeout(markdownUpdateTimer);
-  markdownUpdateTimer = setTimeout(updateMarkdownPreview, 300);
+  markdownUpdateTimer = setTimeout(updateMarkdownPreview, 150);
 }
 
 // IPC 핸들러

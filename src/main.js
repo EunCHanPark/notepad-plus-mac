@@ -147,6 +147,7 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Markdown 미리보기', accelerator: 'CmdOrCtrl+Shift+M', click: () => mainWindow.webContents.send('toggle-markdown-preview') },
         { type: 'separator' },
+        { label: '항상 위에', type: 'checkbox', checked: false, accelerator: 'CmdOrCtrl+Shift+T', click: (item) => { mainWindow.setAlwaysOnTop(item.checked); } },
         { role: 'togglefullscreen', label: '전체 화면' },
         { role: 'toggleDevTools', label: '개발자 도구' },
       ]
