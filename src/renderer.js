@@ -193,6 +193,7 @@ function removeTab(tabId) {
   tabs.splice(idx, 1);
 
   if (tabs.length === 0) {
+    tabIdCounter = 0;
     createNewTab();
   } else if (activeTabId === tabId) {
     switchToTab(tabs[Math.min(idx, tabs.length - 1)].id);
