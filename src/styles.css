@@ -151,6 +151,51 @@ html, body {
   color: white;
 }
 
+/* 고정 핀 아이콘 */
+.tab-pin {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.4;
+  flex-shrink: 0;
+  transition: opacity 0.1s;
+}
+
+.tab:hover .tab-pin {
+  display: flex;
+}
+
+.tab-pin:hover {
+  opacity: 1;
+}
+
+.tab.pinned .tab-pin {
+  display: flex;
+  opacity: 1;
+}
+
+.tab.pinned {
+  border-left: 2px solid var(--accent);
+}
+
+/* 탭 드래그 */
+.tab.dragging {
+  opacity: 0.4;
+}
+
+.tab.drag-before {
+  border-left: 2px solid #ffcc00;
+}
+
+.tab.drag-after {
+  border-right: 2px solid #ffcc00;
+}
+
 #new-tab-btn {
   -webkit-app-region: no-drag;
   display: flex;

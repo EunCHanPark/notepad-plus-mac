@@ -240,7 +240,7 @@ function showAbout() {
     type: 'info',
     title: 'Notepad+ Mac 정보',
     message: 'Notepad+ Mac',
-    detail: 'Version 1.0.6\n\nNotepad++ 스타일의 macOS 텍스트 에디터\nAce Editor 기반\n\nInspired by Notepad++ by Don Ho',
+    detail: 'Version 1.0.7\n\nNotepad++ 스타일의 macOS 텍스트 에디터\nAce Editor 기반\n\nInspired by Notepad++ by Don Ho',
     buttons: ['확인']
   });
 }
@@ -298,6 +298,30 @@ ipcMain.handle('show-unsaved-dialog', async (event, fileName) => {
     cancelId: 2,
   });
   return result.response;
+});
+
+// 세션 저장/복원
+const SESSION_PATH = path.join(app.getPath('userData'), 'session.json');
+
+ipcMain.handle('save-session', async (event, sessionData) => {
+  try {
+    fs.writeFileSync(SESSION_PATH, JSON.stringify(sessionData), 'utf8');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('load-session', async () => {
+  try {
+    if (fs.existsSync(SESSION_PATH)) {
+      const data = JSON.parse(fs.readFileSync(SESSION_PATH, 'utf8'));
+      return { success: true, data };
+    }
+    return { success: false };
+  } catch {
+    return { success: false };
+  }
 });
 
 // 파일 드래그 & 드롭

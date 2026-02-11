@@ -10,11 +10,8 @@ window.onerror = function(msg, url, line, col, error) {
 const { ipcRenderer } = require('electron');
 const path = require('path');
 
-// marked는 index.html에서 <script> 태그로 로드됨 (UMD)
+// marked & ace loaded via <script> tags in index.html
 marked.setOptions({ breaks: true, gfm: true });
-
-// Ace Editor는 index.html에서 <script> 태그로 로드됨
-// basePath 설정 (동적 mode/theme 로딩을 위해)
 ace.config.set('basePath', '../node_modules/ace-builds/src-min-noconflict');
 ace.config.set('modePath', '../node_modules/ace-builds/src-min-noconflict');
 ace.config.set('themePath', '../node_modules/ace-builds/src-min-noconflict');
@@ -29,6 +26,8 @@ let currentFontSize = 14;
 let markdownPreviewVisible = false;
 let markdownUpdateTimer = null;
 let lastRenderedMarkdown = null;
+let draggedTabId = null;
+let sessionSaveTimer = null;
 
 // 확장자 → Ace 모드 매핑
 const EXT_MODE_MAP = {
@@ -84,7 +83,7 @@ function getModeFromPath(filePath) {
 }
 
 // 에디터 초기화
-function initEditor() {
+async function initEditor() {
   editor = ace.edit('editor-container');
   editor.setTheme('ace/theme/' + currentTheme);
   editor.setFontSize(currentFontSize);
@@ -113,20 +112,19 @@ function initEditor() {
     updateTabUI(tab);
     updateStatusBar();
     scheduleMarkdownUpdate();
+    scheduleSessionSave();
   });
 
-  editor.selection.on('changeCursor', () => {
-    updateCursorPosition();
-  });
+  editor.selection.on('changeCursor', () => updateCursorPosition());
+  editor.selection.on('changeSelection', () => updateSelectionInfo());
 
-  editor.selection.on('changeSelection', () => {
-    updateSelectionInfo();
-  });
-
-  createNewTab();
+  const restored = await loadSession();
+  if (!restored) {
+    createNewTab();
+  }
 }
 
-// 탭 함수
+// 탭 생성
 function createNewTab(filePath = null, content = '') {
   const id = ++tabIdCounter;
   const fileName = filePath ? path.basename(filePath) : `새 파일 ${id}`;
@@ -136,6 +134,7 @@ function createNewTab(filePath = null, content = '') {
     id, filePath, fileName, mode, content,
     originalContent: content,
     modified: false,
+    pinned: false,
     cursorPos: { row: 0, column: 0 },
     scrollTop: 0,
     encoding: 'UTF-8',
@@ -149,7 +148,6 @@ function createNewTab(filePath = null, content = '') {
 }
 
 function switchToTab(tabId) {
-  // 현재 탭 상태 저장
   if (activeTabId && editor) {
     const currentTab = tabs.find(t => t.id === activeTabId);
     if (currentTab) {
@@ -201,6 +199,7 @@ function removeTab(tabId) {
   } else {
     renderTabs();
   }
+  scheduleSessionSave();
 }
 
 async function handleUnsavedTab(tab) {
@@ -220,6 +219,7 @@ async function saveTab(tab) {
     tab.modified = false;
     updateTabUI(tab);
     updateStatusBar();
+    scheduleSessionSave();
   }
 }
 
@@ -245,6 +245,166 @@ async function saveTabAs(tab) {
   updateStatusBar();
 }
 
+// 탭 고정
+function togglePinTab(tabId) {
+  const tab = tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  tab.pinned = !tab.pinned;
+
+  const idx = tabs.indexOf(tab);
+  tabs.splice(idx, 1);
+
+  const lastPinnedIdx = tabs.reduce((last, t, i) => t.pinned ? i : last, -1);
+  tabs.splice(lastPinnedIdx + 1, 0, tab);
+
+  renderTabs();
+  scheduleSessionSave();
+}
+
+// 탭 드래그 & 드롭
+function handleTabDragStart(e) {
+  draggedTabId = parseInt(e.currentTarget.dataset.tabId);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', '');
+}
+
+function handleTabDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+
+  const tabEl = e.currentTarget;
+  document.querySelectorAll('.tab.drag-before, .tab.drag-after').forEach(el => {
+    el.classList.remove('drag-before', 'drag-after');
+  });
+
+  const rect = tabEl.getBoundingClientRect();
+  if (e.clientX < rect.left + rect.width / 2) {
+    tabEl.classList.add('drag-before');
+  } else {
+    tabEl.classList.add('drag-after');
+  }
+}
+
+function handleTabDragLeave(e) {
+  e.currentTarget.classList.remove('drag-before', 'drag-after');
+}
+
+function handleTabDrop(e) {
+  e.preventDefault();
+  const targetTabId = parseInt(e.currentTarget.dataset.tabId);
+  if (draggedTabId === null || draggedTabId === targetTabId) return;
+
+  const dragTab = tabs.find(t => t.id === draggedTabId);
+  const targetTab = tabs.find(t => t.id === targetTabId);
+  if (!dragTab || !targetTab) return;
+
+  // 같은 zone에서만 이동 허용 (pinned끼리, unpinned끼리)
+  if (dragTab.pinned !== targetTab.pinned) return;
+
+  const dragIdx = tabs.findIndex(t => t.id === draggedTabId);
+  const [movedTab] = tabs.splice(dragIdx, 1);
+
+  let insertIdx = tabs.findIndex(t => t.id === targetTabId);
+  const rect = e.currentTarget.getBoundingClientRect();
+  if (e.clientX >= rect.left + rect.width / 2) insertIdx++;
+
+  tabs.splice(insertIdx, 0, movedTab);
+  renderTabs();
+  scheduleSessionSave();
+}
+
+function handleTabDragEnd() {
+  draggedTabId = null;
+  document.querySelectorAll('.tab.dragging, .tab.drag-before, .tab.drag-after').forEach(el => {
+    el.classList.remove('dragging', 'drag-before', 'drag-after');
+  });
+}
+
+// 세션 저장/복원
+function scheduleSessionSave() {
+  if (sessionSaveTimer) clearTimeout(sessionSaveTimer);
+  sessionSaveTimer = setTimeout(saveSession, 2000);
+}
+
+async function saveSession() {
+  if (activeTabId && editor) {
+    const currentTab = tabs.find(t => t.id === activeTabId);
+    if (currentTab) {
+      currentTab.content = editor.getValue();
+      currentTab.cursorPos = editor.getCursorPosition();
+      currentTab.scrollTop = editor.session.getScrollTop();
+    }
+  }
+
+  const sessionData = {
+    tabs: tabs.map(tab => ({
+      filePath: tab.filePath,
+      fileName: tab.fileName,
+      content: tab.content,
+      originalContent: tab.originalContent,
+      modified: tab.modified,
+      pinned: tab.pinned,
+      cursorPos: tab.cursorPos,
+      scrollTop: tab.scrollTop,
+      mode: tab.mode,
+      encoding: tab.encoding,
+      eol: tab.eol,
+    })),
+    activeIndex: tabs.findIndex(t => t.id === activeTabId),
+    theme: currentTheme,
+    fontSize: currentFontSize,
+  };
+
+  await ipcRenderer.invoke('save-session', sessionData);
+}
+
+async function loadSession() {
+  const result = await ipcRenderer.invoke('load-session');
+  if (!result.success || !result.data || !result.data.tabs || result.data.tabs.length === 0) {
+    return false;
+  }
+
+  const session = result.data;
+
+  if (session.theme) {
+    currentTheme = session.theme;
+    editor.setTheme('ace/theme/' + currentTheme);
+    document.body.className = currentTheme === 'monokai' ? 'theme-dark' : 'theme-light';
+  }
+  if (session.fontSize) {
+    currentFontSize = session.fontSize;
+    editor.setFontSize(currentFontSize);
+  }
+
+  for (const tabData of session.tabs) {
+    const id = ++tabIdCounter;
+    tabs.push({
+      id,
+      filePath: tabData.filePath || null,
+      fileName: tabData.fileName || `새 파일 ${id}`,
+      content: tabData.content || '',
+      originalContent: tabData.originalContent || '',
+      modified: tabData.modified || false,
+      pinned: tabData.pinned || false,
+      cursorPos: tabData.cursorPos || { row: 0, column: 0 },
+      scrollTop: tabData.scrollTop || 0,
+      mode: tabData.mode || 'text',
+      encoding: tabData.encoding || 'UTF-8',
+      eol: tabData.eol || 'LF',
+    });
+  }
+
+  renderTabs();
+
+  const activeIndex = (session.activeIndex >= 0 && session.activeIndex < tabs.length)
+    ? session.activeIndex : 0;
+  switchToTab(tabs[activeIndex].id);
+
+  return true;
+}
+
 // UI 렌더링
 function renderTabs() {
   const container = document.getElementById('tabs-container');
@@ -252,23 +412,43 @@ function renderTabs() {
 
   tabs.forEach(tab => {
     const tabEl = document.createElement('div');
-    tabEl.className = `tab${tab.id === activeTabId ? ' active' : ''}${tab.modified ? ' modified' : ''}`;
+    tabEl.className = `tab${tab.id === activeTabId ? ' active' : ''}${tab.modified ? ' modified' : ''}${tab.pinned ? ' pinned' : ''}`;
     tabEl.dataset.tabId = tab.id;
+    tabEl.draggable = true;
+
     tabEl.innerHTML = `
+      <span class="tab-pin" title="${tab.pinned ? '고정 해제' : '탭 고정'}">📌</span>
       <span class="tab-title" title="${tab.filePath || tab.fileName}">${tab.fileName}</span>
       <span class="tab-modified">&bull;</span>
       <span class="tab-close" title="닫기">&times;</span>
     `;
-    tabEl.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('tab-close')) switchToTab(tab.id);
+
+    tabEl.querySelector('.tab-pin').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePinTab(tab.id);
     });
+
+    tabEl.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('tab-close') && !e.target.classList.contains('tab-pin')) {
+        switchToTab(tab.id);
+      }
+    });
+
     tabEl.querySelector('.tab-close').addEventListener('click', (e) => {
       e.stopPropagation();
       closeTab(tab.id);
     });
+
     tabEl.addEventListener('mousedown', (e) => {
       if (e.button === 1) { e.preventDefault(); closeTab(tab.id); }
     });
+
+    tabEl.addEventListener('dragstart', handleTabDragStart);
+    tabEl.addEventListener('dragover', handleTabDragOver);
+    tabEl.addEventListener('dragleave', handleTabDragLeave);
+    tabEl.addEventListener('drop', handleTabDrop);
+    tabEl.addEventListener('dragend', handleTabDragEnd);
+
     container.appendChild(tabEl);
   });
 }
@@ -360,6 +540,7 @@ ipcRenderer.on('file-opened', (event, { filePath, content }) => {
   } else {
     createNewTab(filePath, content);
   }
+  scheduleSessionSave();
 });
 
 ipcRenderer.on('save-file', () => saveTab());
@@ -385,7 +566,7 @@ ipcRenderer.on('goto-line', () => { if (editor) editor.execCommand('gotoline'); 
 ipcRenderer.on('toggle-line-numbers', (e, enabled) => {
   if (editor) editor.setOption('showGutter', enabled);
 });
-ipcRenderer.on('toggle-minimap', () => {}); // Ace에는 미니맵 없음
+ipcRenderer.on('toggle-minimap', () => {});
 ipcRenderer.on('toggle-word-wrap', (e, enabled) => {
   if (editor) editor.setOption('wrap', enabled);
 });
@@ -393,14 +574,17 @@ ipcRenderer.on('toggle-word-wrap', (e, enabled) => {
 ipcRenderer.on('zoom-in', () => {
   currentFontSize = Math.min(currentFontSize + 2, 40);
   if (editor) editor.setFontSize(currentFontSize);
+  scheduleSessionSave();
 });
 ipcRenderer.on('zoom-out', () => {
   currentFontSize = Math.max(currentFontSize - 2, 8);
   if (editor) editor.setFontSize(currentFontSize);
+  scheduleSessionSave();
 });
 ipcRenderer.on('zoom-reset', () => {
   currentFontSize = 14;
   if (editor) editor.setFontSize(currentFontSize);
+  scheduleSessionSave();
 });
 
 ipcRenderer.on('toggle-theme', () => {
@@ -412,6 +596,7 @@ ipcRenderer.on('toggle-theme', () => {
     document.body.className = 'theme-dark';
   }
   if (editor) editor.setTheme('ace/theme/' + currentTheme);
+  scheduleSessionSave();
 });
 
 ipcRenderer.on('toggle-markdown-preview', () => toggleMarkdownPreview());
@@ -425,16 +610,18 @@ ipcRenderer.on('set-language', (e, langId) => {
       editor.session.setUseWorker(false);
     }
     updateStatusBar();
+    scheduleSessionSave();
   }
 });
 
 ipcRenderer.on('set-encoding', (e, encoding) => {
   const tab = tabs.find(t => t.id === activeTabId);
-  if (tab) { tab.encoding = encoding; updateStatusBar(); }
+  if (tab) { tab.encoding = encoding; updateStatusBar(); scheduleSessionSave(); }
 });
 
 ipcRenderer.on('app-closing', async () => {
-  const unsaved = tabs.filter(t => t.modified);
+  await saveSession();
+  const unsaved = tabs.filter(t => t.modified && t.filePath);
   if (unsaved.length === 0) { ipcRenderer.send('confirm-close'); return; }
   for (const tab of unsaved) {
     switchToTab(tab.id);
@@ -445,7 +632,7 @@ ipcRenderer.on('app-closing', async () => {
   ipcRenderer.send('confirm-close');
 });
 
-// 드래그 & 드롭
+// 드래그 & 드롭 (파일)
 document.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
 document.addEventListener('drop', (e) => {
   e.preventDefault(); e.stopPropagation();
