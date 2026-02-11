@@ -8,8 +8,12 @@ marked.setOptions({
   gfm: true,
 });
 
-// Monaco Editor 로더
-const monacoPath = path.join(__dirname, '..', 'node_modules', 'monaco-editor', 'min');
+// Monaco Editor 로더 (asar unpack 경로 대응)
+let monacoPath = path.join(__dirname, '..', 'node_modules', 'monaco-editor', 'min');
+// 패키징된 앱에서는 app.asar.unpacked 경로 사용
+if (monacoPath.includes('app.asar')) {
+  monacoPath = monacoPath.replace('app.asar', 'app.asar.unpacked');
+}
 const amdLoader = require(path.join(monacoPath, 'vs', 'loader.js'));
 const amdRequire = amdLoader.require;
 
