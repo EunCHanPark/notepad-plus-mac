@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notepad+ Mac</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-dark">
+  <!-- 탭 바 -->
+  <div id="tab-bar">
+    <div id="tabs-container"></div>
+    <button id="new-tab-btn" title="새 탭 (Ctrl+N)">+</button>
+  </div>
+
+  <!-- 에디터 + 미리보기 영역 -->
+  <div id="editor-wrapper">
+    <div id="editor-container"></div>
+    <div id="markdown-preview" class="hidden">
+      <div id="markdown-preview-header">
+        <span>Markdown 미리보기</span>
+        <button id="close-preview-btn" title="닫기">&times;</button>
+      </div>
+      <div id="markdown-preview-content"></div>
+    </div>
+  </div>
+
+  <!-- 상태 바 -->
+  <div id="status-bar">
+    <div id="status-left">
+      <span id="status-file-info">새 파일</span>
+      <span id="status-modified" class="hidden">● 수정됨</span>
+    </div>
+    <div id="status-right">
+      <span id="status-language" title="언어 선택">Plain Text</span>
+      <span class="status-divider">|</span>
+      <span id="status-encoding">UTF-8</span>
+      <span class="status-divider">|</span>
+      <span id="status-eol">LF</span>
+      <span class="status-divider">|</span>
+      <span id="status-position">줄 1, 열 1</span>
+      <span class="status-divider">|</span>
+      <span id="status-selection"></span>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

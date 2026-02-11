@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="paper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FAFAFA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0E0E0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- 둥근 배경 -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
+  <!-- 문서 아이콘 -->
+  <path d="M 150 80 L 310 80 L 370 140 L 370 420 C 370 435 358 448 342 448 L 170 448 C 155 448 142 435 142 420 L 142 108 C 142 92 155 80 170 80 Z" fill="url(#paper)" opacity="0.95"/>
+  <!-- 접힌 모서리 -->
+  <path d="M 310 80 L 310 140 L 370 140 Z" fill="#BDBDBD"/>
+  <!-- 코드 라인들 -->
+  <rect x="175" y="175" width="160" height="8" rx="4" fill="#4CAF50" opacity="0.7"/>
+  <rect x="175" y="200" width="120" height="8" rx="4" fill="#66BB6A" opacity="0.6"/>
+  <rect x="175" y="225" width="140" height="8" rx="4" fill="#81C784" opacity="0.5"/>
+  <rect x="195" y="250" width="100" height="8" rx="4" fill="#4CAF50" opacity="0.7"/>
+  <rect x="195" y="275" width="130" height="8" rx="4" fill="#66BB6A" opacity="0.6"/>
+  <rect x="175" y="300" width="110" height="8" rx="4" fill="#81C784" opacity="0.5"/>
+  <rect x="175" y="325" width="150" height="8" rx="4" fill="#4CAF50" opacity="0.7"/>
+  <rect x="175" y="350" width="90" height="8" rx="4" fill="#66BB6A" opacity="0.6"/>
+  <!-- N++ 텍스트 -->
+  <text x="256" y="460" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">N++</text>
+</svg>
