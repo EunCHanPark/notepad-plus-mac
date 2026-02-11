@@ -43,13 +43,11 @@ jobs:
 
       - name: Create ZIP
         run: |
-          cd dist
-          APP_DIR=$(find . -name "*.app" -maxdepth 2 | head -1 | xargs dirname)
-          cd "$APP_DIR"
-          APP_NAME=$(find . -name "*.app" -maxdepth 1 | head -1)
+          APP_PATH=$(find dist -name "*.app" -maxdepth 2 -print -quit)
+          APP_DIR=$(dirname "$APP_PATH")
           ZIP_NAME="Notepad+Mac-${{ matrix.arch }}.zip"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "../$ZIP_NAME"
-          echo "Created: ../$(ls ../*.zip)"
+          cd "$APP_DIR"
+          ditto -c -k --sequesterRsrc --keepParent "$(basename "$APP_PATH")" "../$ZIP_NAME"
           ls -lh "../$ZIP_NAME"
 
       - name: Upload ZIP artifact
