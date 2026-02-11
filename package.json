@@ -21,6 +21,7 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "assets/icon.icns",
+      "identity": null,
       "target": [
         {
           "target": "dmg",
@@ -35,6 +36,8 @@
     },
     "dmg": {
       "title": "Notepad+ Mac ${version}",
+      "format": "ULFO",
+      "writeUpdateInfo": false,
       "contents": [
         {
           "x": 130,

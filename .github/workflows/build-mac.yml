@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-mac:
-    runs-on: macos-latest
+    runs-on: macos-13
     strategy:
       matrix:
         arch: [x64, arm64]
@@ -37,6 +37,16 @@ jobs:
         run: npx electron-builder --mac dmg --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Verify DMG
+        run: |
+          echo "=== DMG files ==="
+          ls -lh dist/*.dmg
+          echo "=== Verify DMG integrity ==="
+          for f in dist/*.dmg; do
+            hdiutil verify "$f" && echo "✓ $f is valid" || echo "✗ $f FAILED verification"
+          done
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
