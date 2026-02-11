@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-mac:
-    runs-on: macos-13
+    runs-on: macos-latest
     strategy:
       matrix:
         arch: [x64, arm64]
