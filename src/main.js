@@ -153,13 +153,12 @@ function buildMenu() {
     {
       label: '언어',
       submenu: [
-        { label: 'Plain Text', click: () => mainWindow.webContents.send('set-language', 'plaintext') },
+        { label: 'Plain Text', click: () => mainWindow.webContents.send('set-language', 'text') },
         { type: 'separator' },
-        { label: 'C', click: () => mainWindow.webContents.send('set-language', 'c') },
-        { label: 'C++', click: () => mainWindow.webContents.send('set-language', 'cpp') },
+        { label: 'C/C++', click: () => mainWindow.webContents.send('set-language', 'c_cpp') },
         { label: 'C#', click: () => mainWindow.webContents.send('set-language', 'csharp') },
         { label: 'CSS', click: () => mainWindow.webContents.send('set-language', 'css') },
-        { label: 'Go', click: () => mainWindow.webContents.send('set-language', 'go') },
+        { label: 'Go', click: () => mainWindow.webContents.send('set-language', 'golang') },
         { label: 'HTML', click: () => mainWindow.webContents.send('set-language', 'html') },
         { label: 'Java', click: () => mainWindow.webContents.send('set-language', 'java') },
         { label: 'JavaScript', click: () => mainWindow.webContents.send('set-language', 'javascript') },
@@ -170,7 +169,7 @@ function buildMenu() {
         { label: 'Python', click: () => mainWindow.webContents.send('set-language', 'python') },
         { label: 'Ruby', click: () => mainWindow.webContents.send('set-language', 'ruby') },
         { label: 'Rust', click: () => mainWindow.webContents.send('set-language', 'rust') },
-        { label: 'Shell Script', click: () => mainWindow.webContents.send('set-language', 'shell') },
+        { label: 'Shell Script', click: () => mainWindow.webContents.send('set-language', 'sh') },
         { label: 'SQL', click: () => mainWindow.webContents.send('set-language', 'sql') },
         { label: 'Swift', click: () => mainWindow.webContents.send('set-language', 'swift') },
         { label: 'TypeScript', click: () => mainWindow.webContents.send('set-language', 'typescript') },
@@ -239,7 +238,7 @@ function showAbout() {
     type: 'info',
     title: 'Notepad+ Mac 정보',
     message: 'Notepad+ Mac',
-    detail: 'Version 1.0.0\n\nNotepad++ 스타일의 macOS 텍스트 에디터\nMonaco Editor 기반\n\nInspired by Notepad++ by Don Ho',
+    detail: 'Version 1.0.4\n\nNotepad++ 스타일의 macOS 텍스트 에디터\nAce Editor 기반\n\nInspired by Notepad++ by Don Ho',
     buttons: ['확인']
   });
 }
