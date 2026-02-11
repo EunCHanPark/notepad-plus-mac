@@ -29,9 +29,8 @@ jobs:
         run: npm ci
 
       - name: Build ZIP (${{ matrix.arch }})
-        run: npx electron-builder --mac zip --${{ matrix.arch }}
+        run: npx electron-builder --mac zip --${{ matrix.arch }} --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
       - name: Upload ZIP artifact
