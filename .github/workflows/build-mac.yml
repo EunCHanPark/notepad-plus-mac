@@ -28,10 +28,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build ZIP (${{ matrix.arch }})
-        run: npx electron-builder --mac zip --${{ matrix.arch }} --publish never
+      - name: Build app (${{ matrix.arch }})
+        run: npx electron-builder --mac dir --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Ad-hoc code sign
+        run: |
+          APP_PATH=$(find dist -name "*.app" -maxdepth 2 | head -1)
+          echo "Signing: $APP_PATH"
+          codesign --force --deep --sign - "$APP_PATH"
+          echo "Verifying signature..."
+          codesign --verify --deep "$APP_PATH" && echo "Signature valid" || echo "Signature check failed"
+
+      - name: Create ZIP
+        run: |
+          cd dist
+          APP_DIR=$(find . -name "*.app" -maxdepth 2 | head -1 | xargs dirname)
+          cd "$APP_DIR"
+          APP_NAME=$(find . -name "*.app" -maxdepth 1 | head -1)
+          ZIP_NAME="Notepad+Mac-${{ matrix.arch }}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "../$ZIP_NAME"
+          echo "Created: ../$(ls ../*.zip)"
+          ls -lh "../$ZIP_NAME"
 
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
